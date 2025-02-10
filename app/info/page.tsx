@@ -1,22 +1,68 @@
-// app/info/page.tsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePreview } from "../PreviewContext";
-import { Button, TextField, Typography, Paper } from "@mui/material";
+import {
+  Button,
+  TextField,
+  Typography,
+  Paper,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from "@mui/material";
 import { motion } from "framer-motion";
 
 export default function InfoPage() {
   const router = useRouter();
   const { type, setPreviewHTML } = usePreview();
 
-  // 絵本の場合に必要な情報
-  const [panelNum, setPanelNum] = useState(1);
-  const [commitOutline, setCommitOutline] = useState("");
+  const fixedPageNum = type === "ehon" ? 2 : 4;
+
+  const genreOptions = [
+    "ファンタジー",
+    "冒険",
+    "ミステリー",
+    "サイエンスフィクション",
+    "ホラー",
+    "ラブストーリー",
+    "コメディ",
+    "歴史",
+    "スポーツ",
+    "動物",
+  ];
+
+  const styleOptionsEhon = [
+    "和風",
+    "洋風",
+    "モダン",
+    "ファンタジー",
+    "クラシック",
+    "カラフル",
+    "シンプル",
+    "ナチュラル",
+    "キュート",
+    "ビンテージ",
+  ];
+
+  const styleOptionsManga = [
+    "少女漫画",
+    "少年漫画",
+    "ギャグ漫画",
+    "SF漫画",
+    "アクション漫画",
+    "ロマンス漫画",
+    "ホラー漫画",
+    "スポーツ漫画",
+    "サスペンス漫画",
+    "ファンタジー漫画",
+  ];
+
   const [genre, setGenre] = useState("");
   const [style, setStyle] = useState("");
-
+  const [outline, setOutline] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,15 +70,32 @@ export default function InfoPage() {
     setLoading(true);
 
     const body = {
-      panel_num: panelNum,
-      commit_outline: commitOutline,
+      panel_num: fixedPageNum,
+      commit_outline: outline,
       genre: genre,
       style: style,
     };
 
-    // バックエンド API のエンドポイント
-    const endpoint = type === "ehon" ? "/ehon" : "/manga";
-    const backendUrl = `https://app-aipen-dalle-acb3beb7fzgfaxa9.japaneast-01.azurewebsites.net${endpoint}`;
+    // 環境変数からエンドポイントを取得
+    const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL;
+    if (!backendBase) {
+      console.error("環境変数 NEXT_PUBLIC_BACKEND_URL が設定されていません");
+      alert("サーバ設定エラーです");
+      setLoading(false);
+      return;
+    }
+    const endpoint = type === "ehon" ? "/ehon/" : "/manga/";
+    const backendUrl = `${backendBase}${endpoint}`;
+
+    function base64DecodeUnicode(str: string) {
+      return decodeURIComponent(
+        Array.prototype.map
+          .call(atob(str), (c: string) => {
+            return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+          })
+          .join("")
+      );
+    }
 
     try {
       const res = await fetch(backendUrl, {
@@ -44,9 +107,8 @@ export default function InfoPage() {
         throw new Error("APIリクエストに失敗しました");
       }
       const data = await res.json();
-      // バックエンドから返ってくるHTMLはBase64エンコードされている前提
       const htmlBase64 = data.output_html_base64;
-      const decodedHTML = atob(htmlBase64);
+      const decodedHTML = base64DecodeUnicode(htmlBase64);
       setPreviewHTML(decodedHTML);
       router.push("/preview");
     } catch (error: any) {
@@ -65,19 +127,51 @@ export default function InfoPage() {
         </Typography>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <TextField
-            label="Panel Number"
-            type="number"
-            value={panelNum}
-            onChange={(e) => setPanelNum(Number(e.target.value))}
-            required
+            label="Page Number"
+            value={fixedPageNum}
+            disabled
             variant="outlined"
             fullWidth
             InputProps={{ className: "rounded-lg" }}
           />
+          <FormControl variant="outlined" fullWidth required>
+            <InputLabel id="genre-label">Genre</InputLabel>
+            <Select
+              labelId="genre-label"
+              label="Genre"
+              value={genre}
+              onChange={(e) => setGenre(e.target.value)}
+              className="rounded-lg"
+            >
+              {genreOptions.map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl variant="outlined" fullWidth required>
+            <InputLabel id="style-label">Style</InputLabel>
+            <Select
+              labelId="style-label"
+              label="Style"
+              value={style}
+              onChange={(e) => setStyle(e.target.value)}
+              className="rounded-lg"
+            >
+              {(type === "ehon" ? styleOptionsEhon : styleOptionsManga).map(
+                (option) => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                )
+              )}
+            </Select>
+          </FormControl>
           <TextField
-            label="Commit Outline"
-            value={commitOutline}
-            onChange={(e) => setCommitOutline(e.target.value)}
+            label="Outline"
+            value={outline}
+            onChange={(e) => setOutline(e.target.value)}
             required
             variant="outlined"
             fullWidth
@@ -85,26 +179,14 @@ export default function InfoPage() {
             rows={3}
             InputProps={{ className: "rounded-lg" }}
           />
-          <TextField
-            label="Genre"
-            value={genre}
-            onChange={(e) => setGenre(e.target.value)}
-            required
-            variant="outlined"
-            fullWidth
-            InputProps={{ className: "rounded-lg" }}
-          />
-          <TextField
-            label="Style"
-            value={style}
-            onChange={(e) => setStyle(e.target.value)}
-            required
-            variant="outlined"
-            fullWidth
-            InputProps={{ className: "rounded-lg" }}
-          />
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button variant="contained" color="primary" type="submit" fullWidth disabled={loading}>
+            <Button
+              variant="contained"
+              color="primary"
+              type="submit"
+              fullWidth
+              disabled={loading}
+            >
               {loading ? "生成中..." : "プレビューを作成"}
             </Button>
           </motion.div>
