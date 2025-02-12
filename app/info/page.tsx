@@ -85,9 +85,16 @@ export default function InfoPage() {
       style: style,
     };
 
-    // バックエンド API のエンドポイント
+    const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL;
+    if (!backendBase) {
+      console.error("環境変数 NEXT_PUBLIC_BACKEND_URL が設定されていません");
+      alert("サーバ設定エラーです");
+      setLoading(false);
+      return;
+    }
+
     const endpoint = type === "ehon" ? "/ehon/" : "/manga/";
-    const backendUrl = `https://app-aipen-dalle-acb3beb7fzgfaxa9.japaneast-01.azurewebsites.net${endpoint}`;
+    const backendUrl = `${backendBase}${endpoint}`;
 
     // Base64 をUTF-8で正しくデコードする関数
     function base64DecodeUnicode(str: string) {
