@@ -33,7 +33,7 @@ jobs:
           output_location: "" # Built app content directory - optional
           ###### End of Repository/Build Configurations ######
         env:
-          NEXT_PUBLIC_BACKEND_URL: "app-aipen-dalle-acb3beb7fzgfaxa9.japaneast-01.azurewebsites.net/"
+          NEXT_PUBLIC_BACKEND_URL: "https://app-aipen-dalle-acb3beb7fzgfaxa9.japaneast-01.azurewebsites.net/"
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
